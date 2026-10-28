@@ -751,3 +751,121 @@ func TestJWTMultipleAudiences(t *testing.T) {
 		})
 	}
 }
+
+// TestJWTAuthRevocation verifies that a connection does not outlive the authorization it was opened with.
+func TestJWTAuthRevocation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping JWT auth revocation tests in short mode")
+	}
+
+	jwksServer, privateKey, jwksURL := setupJWKSServer(t)
+	defer jwksServer.Close()
+
+	const (
+		issuer   = "https://test-issuer.example.com"
+		audience = "test-audience"
+	)
+
+	hostKey, err := nbssh.GeneratePrivateKey(nbssh.ED25519)
+	require.NoError(t, err)
+
+	testUserHash, err := sshuserhash.HashUserID("test-user")
+	require.NoError(t, err)
+	otherUserHash, err := sshuserhash.HashUserID("other-user")
+	require.NoError(t, err)
+
+	currentUser := testutil.GetTestUsername(t)
+
+	testCases := []struct {
+		name       string
+		update     *sshauth.Config
+		wantClosed bool
+	}{
+		{
+			name: "keeps_connection_of_authorized_user",
+			update: &sshauth.Config{
+				AuthorizedUsers: []sshuserhash.UserIDHash{otherUserHash, testUserHash},
+				MachineUsers:    map[string][]uint32{currentUser: {0, 1}},
+			},
+			wantClosed: false,
+		},
+		{
+			name: "closes_connection_of_removed_user",
+			update: &sshauth.Config{
+				AuthorizedUsers: []sshuserhash.UserIDHash{otherUserHash},
+				MachineUsers:    map[string][]uint32{currentUser: {0}},
+			},
+			wantClosed: true,
+		},
+		{
+			name: "closes_connection_of_unmapped_os_user",
+			update: &sshauth.Config{
+				AuthorizedUsers: []sshuserhash.UserIDHash{testUserHash},
+				MachineUsers:    map[string][]uint32{"some-other-os-user": {0}},
+			},
+			wantClosed: true,
+		},
+		{
+			name:       "closes_connection_on_cleared_authorization",
+			update:     nil,
+			wantClosed: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := New(&Config{
+				HostKeyPEM: hostKey,
+				JWT: &JWTConfig{
+					Issuer:       issuer,
+					Audiences:    []string{audience},
+					KeysLocation: jwksURL,
+				},
+				Auth: &sshauth.Config{
+					AuthorizedUsers: []sshuserhash.UserIDHash{testUserHash},
+					MachineUsers:    map[string][]uint32{currentUser: {0}},
+				},
+			})
+			server.SetAllowRootLogin(true)
+
+			serverAddr := StartTestServer(t, server)
+			defer func() { require.NoError(t, server.Stop()) }()
+
+			conn, err := cryptossh.Dial("tcp", serverAddr, &cryptossh.ClientConfig{
+				User: currentUser,
+				Auth: []cryptossh.AuthMethod{
+					cryptossh.Password(generateValidJWT(t, privateKey, issuer, audience)),
+				},
+				HostKeyCallback: cryptossh.InsecureIgnoreHostKey(),
+				Timeout:         2 * time.Second,
+			})
+			require.NoError(t, err)
+			defer func() { _ = conn.Close() }()
+
+			closed := make(chan struct{})
+			go func() {
+				_ = conn.Wait()
+				close(closed)
+			}()
+
+			server.UpdateSSHAuth(tc.update)
+
+			if !tc.wantClosed {
+				session, err := conn.NewSession()
+				require.NoError(t, err, "connection of an authorized user should stay usable")
+				defer session.Close()
+				require.NoError(t, session.Shell())
+				return
+			}
+
+			select {
+			case <-closed:
+			case <-time.After(5 * time.Second):
+				t.Fatal("connection of a user who lost authorization should be closed")
+			}
+
+			_, sessions := server.GetStatus()
+			assert.Empty(t, sessions, "closed connection should not be tracked anymore")
+		})
+	}
+}
