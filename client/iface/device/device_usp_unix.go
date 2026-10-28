@@ -1,4 +1,4 @@
-//go:build (linux && !android) || freebsd
+//go:build (linux && !android) || freebsd || openbsd
 
 package device
 
@@ -43,6 +43,9 @@ func NewTunDevice(name string, address wgaddr.Address, port int, key string, mtu
 
 func (t *TunDevice) Create() (WGConfigurer, error) {
 	log.Info("create tun interface")
+	if err := prepareTunNode(t.name); err != nil {
+		return nil, fmt.Errorf("prepare tun device node: %w", err)
+	}
 	tunIface, err := wgbackend.CreateTUN(t.name, int(t.mtu))
 	if err != nil {
 		log.Debugf("failed to create tun interface (%s, %d): %s", t.name, int(t.mtu), err)
