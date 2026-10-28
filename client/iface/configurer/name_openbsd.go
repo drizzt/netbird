@@ -12,6 +12,12 @@ import (
 // interfaces cannot be renamed, so the name must be tunN with N below 256.
 const WgInterfaceDefault = "tun100"
 
+// ValidateInterfaceName checks that name is a tun interface name.
+func ValidateInterfaceName(name string) error {
+	_, err := TunUnit(name)
+	return err
+}
+
 // TunUnit returns the unit number of a tun interface name. wireguard-go parses
 // the unit with %d, so tun007 would open tun7, and maps the device minor back
 // to a name modulo 256: only the canonical tun0 to tun255 is accepted.

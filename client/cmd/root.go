@@ -140,7 +140,7 @@ func init() {
 
 		oldDefaultConfigPathDir = os.Getenv("PROGRAMDATA") + "\\Wiretrustee\\"
 		oldDefaultLogFileDir = os.Getenv("PROGRAMDATA") + "\\Wiretrustee\\"
-	case "freebsd":
+	case "freebsd", "openbsd":
 		defaultConfigPathDir = "/var/db/netbird/"
 	}
 

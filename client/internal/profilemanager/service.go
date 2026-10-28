@@ -75,7 +75,7 @@ func init() {
 			oldDefaultConfigPathDir = filepath.Join(os.Getenv("PROGRAMDATA"), "Netbird")
 			DefaultConfigPathDir = oldDefaultConfigPathDir
 
-		case "freebsd":
+		case "freebsd", "openbsd":
 			oldDefaultConfigPathDir = "/var/db/netbird/"
 			DefaultConfigPathDir = oldDefaultConfigPathDir
 		}

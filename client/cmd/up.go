@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
-	"runtime"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -17,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/netbirdio/netbird/client/iface"
+	"github.com/netbirdio/netbird/client/iface/configurer"
 	"github.com/netbirdio/netbird/client/internal"
 	"github.com/netbirdio/netbird/client/internal/peer"
 	"github.com/netbirdio/netbird/client/internal/profilemanager"
@@ -68,7 +67,7 @@ func init() {
 	upCmd.PersistentFlags().Uint16Var(&wireguardPort, wireguardPortFlag, iface.DefaultWgPort, "WireGuard interface listening port")
 	upCmd.PersistentFlags().Uint16Var(&mtu, mtuFlag, iface.DefaultMTU, "Set MTU (Maximum Transmission Unit) for the WireGuard interface")
 	upCmd.PersistentFlags().BoolVarP(&networkMonitor, networkMonitorFlag, "N", networkMonitor,
-		`Manage network monitoring. Defaults to true on Windows and macOS, false on Linux and FreeBSD. `+
+		`Manage network monitoring. Defaults to true on Windows and macOS, false on Linux, FreeBSD and OpenBSD. `+
 			`E.g. --network-monitor=false to disable or --network-monitor=true to enable.`,
 	)
 	upCmd.PersistentFlags().StringSliceVar(&extraIFaceBlackList, extraIFaceBlackListFlag, nil, "Extra list of default interfaces to ignore for listening")
@@ -510,7 +509,7 @@ func setupSetConfigReq(customDNSAddressConverted []byte, cmd *cobra.Command, pro
 	setBoolPtrIfChanged(cmd, remoteJobsAllowedFlag, &req.RemoteJobsAllowed, remoteJobsAllowed)
 
 	if cmd.Flag(interfaceNameFlag).Changed {
-		if err := parseInterfaceName(interfaceName); err != nil {
+		if err := configurer.ValidateInterfaceName(interfaceName); err != nil {
 			log.Errorf("parse interface name: %v", err)
 			return nil
 		}
@@ -626,7 +625,7 @@ func setupConfig(customDNSAddressConverted []byte, cmd *cobra.Command, configFil
 	}
 
 	if cmd.Flag(interfaceNameFlag).Changed {
-		if err := parseInterfaceName(interfaceName); err != nil {
+		if err := configurer.ValidateInterfaceName(interfaceName); err != nil {
 			return nil, err
 		}
 		ic.InterfaceName = &interfaceName
@@ -774,7 +773,7 @@ func setupLoginRequest(providedSetupKey string, customDNSAddressConverted []byte
 	}
 
 	if cmd.Flag(interfaceNameFlag).Changed {
-		if err := parseInterfaceName(interfaceName); err != nil {
+		if err := configurer.ValidateInterfaceName(interfaceName); err != nil {
 			return nil, err
 		}
 		loginRequest.InterfaceName = &interfaceName
@@ -827,18 +826,6 @@ func setupLoginRequest(providedSetupKey string, customDNSAddressConverted []byte
 	}
 
 	return &loginRequest, nil
-}
-
-func parseInterfaceName(name string) error {
-	if runtime.GOOS != "darwin" {
-		return nil
-	}
-
-	if strings.HasPrefix(name, "utun") {
-		return nil
-	}
-
-	return fmt.Errorf("invalid interface name %s. Please use the prefix utun followed by a number on MacOS. e.g., utun1 or utun199", name)
 }
 
 func parseCustomDNSAddress(modified bool) ([]byte, error) {

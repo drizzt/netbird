@@ -86,7 +86,7 @@ func (t TokenInfo) GetTokenToUse() string {
 }
 
 func shouldUseDeviceFlow(force bool, isUnixDesktopClient bool) bool {
-	return force || (runtime.GOOS == "linux" || runtime.GOOS == "freebsd") && !isUnixDesktopClient
+	return force || (runtime.GOOS == "linux" || runtime.GOOS == "freebsd" || runtime.GOOS == "openbsd") && !isUnixDesktopClient
 }
 
 // NewOAuthFlow initializes and returns the appropriate OAuth flow based on the management configuration.

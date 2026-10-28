@@ -144,7 +144,7 @@ func (pd *PrivilegeDropper) setGroupsAndIDs(targetUID, targetGID uint32, supplem
 		groups[i] = int(g)
 	}
 
-	if runtime.GOOS == "darwin" || runtime.GOOS == "freebsd" {
+	if runtime.GOOS == "darwin" || runtime.GOOS == "freebsd" || runtime.GOOS == "openbsd" {
 		if len(groups) == 0 || groups[0] != int(targetGID) {
 			groups = append([]int{int(targetGID)}, groups...)
 		}

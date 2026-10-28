@@ -48,12 +48,12 @@ func graphicalXDGSessionTypes() []string {
 }
 
 // HasGraphicalSession reports whether this process can open a browser and serve a loopback
-// redirect back to it. Windows and macOS always can. On Linux and FreeBSD the answer is env
+// redirect back to it. Windows and macOS always can. On Linux, FreeBSD and OpenBSD the answer is env
 // based, so it only holds for a process started from the graphical session itself: a service
 // does not inherit those variables and always reports false, which is why callers running in
 // the user's session pass their own answer to the daemon.
 func HasGraphicalSession() bool {
-	if runtime.GOOS != "linux" && runtime.GOOS != "freebsd" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "freebsd" && runtime.GOOS != "openbsd" {
 		return true
 	}
 

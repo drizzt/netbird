@@ -9,7 +9,7 @@ import (
 )
 
 func TestHasGraphicalSession(t *testing.T) {
-	if runtime.GOOS != "linux" && runtime.GOOS != "freebsd" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "freebsd" && runtime.GOOS != "openbsd" {
 		assert.True(t, HasGraphicalSession(), "%s always has a graphical session", runtime.GOOS)
 		return
 	}
