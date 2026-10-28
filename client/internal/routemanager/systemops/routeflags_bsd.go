@@ -14,7 +14,7 @@ func filterRoutesByFlags(routeMessageFlags int) bool {
 		return true
 	}
 
-	if routeMessageFlags&(unix.RTF_REJECT|unix.RTF_BLACKHOLE|unix.RTF_WASCLONED) != 0 {
+	if routeMessageFlags&(unix.RTF_REJECT|unix.RTF_BLACKHOLE|rtfWasCloned) != 0 {
 		return true
 	}
 
@@ -58,7 +58,7 @@ func formatBSDFlags(flags int) string {
 	if flags&unix.RTF_CLONING != 0 {
 		flagStrs = append(flagStrs, "C")
 	}
-	if flags&unix.RTF_WASCLONED != 0 {
+	if flags&rtfWasCloned != 0 {
 		flagStrs = append(flagStrs, "W")
 	}
 	if flags&unix.RTF_PROTO1 != 0 {

@@ -1,4 +1,4 @@
-//go:build windows || (linux && !android) || (darwin && !ios) || freebsd
+//go:build windows || (linux && !android) || (darwin && !ios) || freebsd || openbsd
 
 package system
 

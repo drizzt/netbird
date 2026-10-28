@@ -14,6 +14,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/route"
+	"golang.org/x/sys/unix"
 )
 
 func GetRoutesFromTable() ([]netip.Prefix, error) {
@@ -156,7 +157,7 @@ func extractBSDProtocol(flags int) string {
 	if flags&syscall.RTF_DYNAMIC != 0 {
 		return "dynamic"
 	}
-	if flags&syscall.RTF_LOCAL != 0 {
+	if flags&unix.RTF_LOCAL != 0 {
 		return "local"
 	}
 	return "kernel"
